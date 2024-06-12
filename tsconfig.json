@@ -1,0 +1,45 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"lib": [
+			"DOM",
+			"DOM.Iterable",
+			"ESNext"
+		],
+		"jsx": "react-jsx",
+		"module": "ESNext",
+		"paths": {
+			"@/*": [
+				"./src/*"
+			]
+		},
+		"types": [
+			"node",
+			"@webgpu/types"
+		],
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": false,
+		"skipLibCheck": true,
+		"allowJs": false,
+		"removeComments": false,
+		"strict": true,
+		"noImplicitAny": true,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"noImplicitReturns": true,
+		"strictNullChecks": false,
+		"allowSyntheticDefaultImports": true,
+		"moduleResolution": "Bundler",
+		"resolveJsonModule": true,
+		"downlevelIteration": true,
+		"skipDefaultLibCheck": true,
+	},
+	"include": [
+		"./src/**/*.ts",
+		"./global.d.ts"
+	],
+	"exclude": [
+		"node_modules",
+		"**/dist/**",
+	],
+}
