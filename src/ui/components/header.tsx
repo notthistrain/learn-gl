@@ -4,18 +4,14 @@ import { DownOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd/es/menu'
 import { useNavigate } from 'react-router-dom'
 import { memo, useMemo } from 'react'
+import { root_children } from '@/ui/routes'
 
 export const Header = memo(function () {
     const navigate = useNavigate()
 
     const menu: MenuProps = useMemo(() => {
         return {
-            items: [
-                {
-                    label: '环',
-                    key: 'ring'
-                }
-            ],
+            items: root_children.map((r) => ({ label: r.id, key: r.path })),
             onClick: ({ key }) => {
                 navigate(`${key}`)
             }

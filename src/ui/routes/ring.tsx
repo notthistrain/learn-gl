@@ -1,21 +1,21 @@
 import { useEffect, useRef } from 'react'
-import { use_webgpu, IWebGpuCombine } from '@/hook/use-webgpu'
+import { use_webgpu, IEffectWrap } from '@/hook/use-webgpu'
 import shader_code from '@/shader/ring.wgsl'
 
 
-const bytes_of_position = 2
-const bytes_of_color = 1
-const bytes_of_vertex = (bytes_of_position + bytes_of_color)
-const bytes_of_triangle_indices = 3
+const floats_of_position = 2
+const floats_of_color = 1
+const floats_of_vertex = (floats_of_position + floats_of_color)
+const floats_of_triangle_indices = 3
 const triangle_nums_of_subvision = 2
 /** scalex scaley offsetx offsety rgb */
-const bytes_of_scale = 2
-const bytes_of_offset = 2
-const bytes_of_changing = bytes_of_scale + bytes_of_offset
-const bytes_of_input_item = bytes_of_changing + bytes_of_color
+const floats_of_scale = 2
+const floats_of_offset = 2
+const floats_of_changing = floats_of_scale + floats_of_offset
+const floats_of_input_item = floats_of_changing + floats_of_color
 /** ring appearance */
 const nums_of_subvision = 360
-const nums_of_ring = 36
+const nums_of_ring = 24
 
 function rand(min?: number, max?: number) {
     if (min === undefined) {
@@ -34,12 +34,12 @@ function create_circle_vertices(
     inner_radius = 0.25
 ) {
 
-    const vertex_data = new Float32Array((nums_of_subvision + 1) * bytes_of_position * bytes_of_vertex)
-    const index_data = new Uint32Array(nums_of_subvision * bytes_of_triangle_indices * triangle_nums_of_subvision)
+    const vertex_data = new Float32Array((nums_of_subvision + 1) * floats_of_position * floats_of_vertex)
+    const index_data = new Uint32Array(nums_of_subvision * floats_of_triangle_indices * triangle_nums_of_subvision)
     const color_data = new Uint8Array(vertex_data.buffer)
     let vertex_offset = 0
     let index_offset = 0
-    let color_offset = bytes_of_position * 4
+    let color_offset = floats_of_position * 4
 
     function add_vertex(x: number, y: number, ...rgb: number[]) {
         vertex_data[vertex_offset++] = x
@@ -49,7 +49,7 @@ function create_circle_vertices(
         color_data[color_offset++] = rgb[0] * 255
         color_data[color_offset++] = rgb[1] * 255
         color_data[color_offset++] = rgb[2] * 255
-        color_offset += bytes_of_position * 4 + 1
+        color_offset += floats_of_position * 4 + 1
     }
 
     function add_index(i: number) {
@@ -82,12 +82,9 @@ function create_circle_vertices(
     }
 }
 
-interface IEffectWrap {
-    clean?: Function
-}
-
 async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
-    const { device, context, format } = await use_webgpu(canvas)
+    const { device, context, format, clean } = await use_webgpu(canvas, draw)
+    effect.clean = clean
     context.configure({ device, format })
 
     const { vertex_data, index_data } = create_circle_vertices(nums_of_subvision, 0.3, 0.16)
@@ -107,7 +104,7 @@ async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
     })
     device.queue.writeBuffer(index_buffer, 0, index_data)
 
-    const input_vertex_data = new Float32Array(nums_of_ring * bytes_of_input_item)
+    const input_vertex_data = new Float32Array(nums_of_ring * floats_of_input_item)
     const input_vertex_buffer = device.createBuffer({
         label: 'changing vertex buffer',
         size: input_vertex_data.byteLength,
@@ -122,7 +119,7 @@ async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
             entryPoint: 'vertex_main',
             buffers: [
                 {
-                    arrayStride: bytes_of_vertex * 4,
+                    arrayStride: floats_of_vertex * 4,
                     attributes: [
                         {
                             shaderLocation: 0,
@@ -131,13 +128,13 @@ async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
                         },
                         {
                             shaderLocation: 1,
-                            offset: bytes_of_position * 4,
+                            offset: floats_of_position * 4,
                             format: 'unorm8x4'
                         }
                     ]
                 },
                 {
-                    arrayStride: bytes_of_input_item * 4,
+                    arrayStride: floats_of_input_item * 4,
                     stepMode: 'instance',
                     attributes: [
                         {
@@ -147,12 +144,12 @@ async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
                         },
                         {
                             shaderLocation: 3,
-                            offset: bytes_of_scale * 4,
+                            offset: floats_of_scale * 4,
                             format: 'float32x2'
                         },
                         {
                             shaderLocation: 4,
-                            offset: bytes_of_changing * 4,
+                            offset: floats_of_changing * 4,
                             format: 'unorm8x4'
                         }
                     ]
@@ -181,7 +178,7 @@ async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
     function set_input_data() {
         const color_data_u8 = new Uint8Array(input_vertex_data.buffer)
         let changing_offset = 0
-        let color_offset = bytes_of_changing * 4
+        let color_offset = floats_of_changing * 4
         for (let i = 0; i < nums_of_ring; i++) {
             const scale = rand()
             /** set scale&offset data */
@@ -194,11 +191,10 @@ async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
             color_data_u8[color_offset++] = rand() * 255
             color_data_u8[color_offset++] = rand() * 255
             color_data_u8[color_offset++] = rand() * 255
-            color_offset += bytes_of_changing * 4 + 1
+            color_offset += floats_of_changing * 4 + 1
         }
         device.queue.writeBuffer(input_vertex_buffer, 0, input_vertex_data)
     }
-
     function draw() {
         set_input_data()
         const command_encoder = device.createCommandEncoder()
@@ -214,32 +210,6 @@ async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
         render_pass.end()
         const command_buffer = command_encoder.finish()
         device.queue.submit([command_buffer])
-    }
-
-    const observer = new ResizeObserver(entries => {
-        for (const entry of entries) {
-            const canvas = entry.target as HTMLCanvasElement
-            const width = entry.contentBoxSize[0].inlineSize
-            const height = entry.contentBoxSize[0].blockSize
-            canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D))
-            canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D))
-            draw()
-        }
-    })
-    observer.observe(canvas)
-
-    const on_message = (e: MessageEvent) => {
-        if (e.data === 'render') {
-            draw()
-        }
-    }
-    addEventListener('message', on_message)
-
-    effect.clean = () => {
-        device.destroy()
-        context.unconfigure()
-        observer.disconnect()
-        removeEventListener('message', on_message)
     }
 }
 
