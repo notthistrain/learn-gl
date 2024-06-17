@@ -30,7 +30,7 @@ function create_heart_vertices() {
     let vertex_offset = 2
     for (let i = 1; i <= nums_of_vertices; i++) {
         const angle = angle_of_subvision * i
-        
+
         // const x = param_a * (1 - sin(angle)) * cos(angle)
         // const y = param_a * (1 - sin(angle)) * sin(angle)
 
@@ -68,12 +68,6 @@ async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
     })
     device.queue.writeBuffer(index_buffer, 0, index_data)
 
-    // const bind_group = device.createBindGroup({
-    //     label: 'heart bind group',
-    //     layout: 0,
-    //     entries: undefined
-    // })
-
     const module = device.createShaderModule({ code: shader_code })
     const pipe_line = device.createRenderPipeline({
         label: 'heart render pipe line',
@@ -81,6 +75,9 @@ async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
         vertex: {
             module,
             entryPoint: 'vertex_main',
+            constants: {
+                'aspect': canvas.width / canvas.height
+            },
             buffers: [
                 {
                     arrayStride: floats_of_position * bytes_of_float,
@@ -99,6 +96,23 @@ async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
             entryPoint: 'fragment_main',
             targets: [{ format }]
         }
+    })
+
+    const translate_data = new Float32Array([0.0, 0.25])
+    const translate_buffer = device.createBuffer({
+        label: 'translate buffer',
+        size: translate_data.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    })
+    const bind_group = device.createBindGroup({
+        label: 'heart bind group',
+        layout: pipe_line.getBindGroupLayout(0),
+        entries: [
+            {
+                binding: 0,
+                resource: { buffer: translate_buffer }
+            }
+        ]
     })
 
     const render_pass_descriptor: GPURenderPassDescriptor = {
@@ -122,6 +136,7 @@ async function render(canvas: HTMLCanvasElement, effect: IEffectWrap) {
         render_pass.setPipeline(pipe_line)
         render_pass.setVertexBuffer(0, vertex_buffer)
         render_pass.setIndexBuffer(index_buffer, 'uint32')
+        render_pass.setBindGroup(0, bind_group)
         render_pass.drawIndexed(index_data.length)
         render_pass.end()
         const command_buffer = command_encoder.finish()
